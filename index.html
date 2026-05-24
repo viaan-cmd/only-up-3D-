@@ -65,29 +65,76 @@
             letter-spacing: 1px;
             pointer-events: none;
         }
-
-        #mobile-controls {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 999;
-    display: none;
-}
-
-@media (max-width: 768px) {
-    #mobile-controls {
-        display: block;
+        // Device Selection Manager
+function selectDevice(type) {
+    document.getElementById('device-selection').style.display = 'none';
+    if (type === 'mobile') {
+        document.getElementById('mobile-ui').style.display = 'block';
+        setupJoystick();
     }
 }
 
-#mobile-controls button {
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.5);
-    border: 2px solid #fff;
-    border-radius: 50%;
-    font-size: 24px;
+// Joystick Math Engine
+function setupJoystick() {
+    const container = document.getElementById('joystick-container');
+    const knob = document.getElementById('joystick-knob');
+    const jumpBtn = document.getElementById('btn-mobile-jump');
+    
+    let activeTouchId = null;
+    const baseRadius = 50;
+
+    container.addEventListener('touchstart', (e) => {
+        if (activeTouchId === null) activeTouchId = e.changedTouches[0].identifier;
+    });
+
+    container.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        let touch = null;
+        for (let t of e.touches) {
+            if (t.identifier === activeTouchId) { touch = t; break; }
+        }
+        if (!touch) return;
+
+        const rect = container.getBoundingClientRect();
+        const centerX = rect.left + baseRadius;
+        const centerY = rect.top + baseRadius;
+
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        let distance = Math.sqrt(dx*dx + dy*dy);     
+        
+  if (distance > baseRadius) {
+            dx = (dx / distance) * baseRadius;
+            dy = (dy / distance) * baseRadius;
+        }
+
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+        // Feeds directly into your existing movement key logic
+        keys.d = dx > 15;
+        keys.a = dx < -15;
+        keys.s = dy > 15;
+        keys.w = dy < -15;
+    });
+
+    container.addEventListener('touchend', () => {
+        activeTouchId = null;
+        knob.style.transform = 'translate(0px, 0px)';
+        keys.w = keys.a = keys.s = keys.d = false;
+    });
+
+    jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys.Space = true; });
+    jumpBtn.addEventListener('touchend', () => { keys.Space = false; });
 }
+
+
+ /* Joystick Layout */
+#mobile-ui { position: fixed; bottom: 30px; left: 0; width: 100%; height: 150px; z-index: 999; display: none; pointer-events: none; }
+#joystick-container { position: absolute; bottom: 10px; left: 40px; width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; border: 2px solid #fff; pointer-events: auto; }
+#joystick-knob { position: absolute; top: 30px; left: 30px; width: 40px; height: 40px; background: #fff; border-radius: 50%; }
+#action-btn-container { position: absolute; bottom: 30px; right: 40px; pointer-events: auto; }
+#btn-mobile-jump { width: 75px; height: 75px; background: rgba(46, 213, 115, 0.6); border: 2px solid #fff; border-radius: 50%; color: white; font-weight: bold; font-size: 16px; }
+       
 
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
