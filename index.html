@@ -64,7 +64,7 @@
             color: white; border-radius: 6px; box-shadow: 0 5px 15px rgba(46,213,115,0.4);
         }
         
-        /* --- HIGH PERFORMANCE JOYSTICK STYLING --- */
+        /* --- TOUCH CONTROL INTERFACE --- */
         #joystick-container {
             position: absolute;
             bottom: 50px;
@@ -89,7 +89,6 @@
             border-radius: 50%;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             touch-action: none;
-            transition: transform 0.05s linear;
         }
         #jump-button {
             position: absolute;
@@ -144,7 +143,7 @@
     </div>
 
 <script>
-    // --- Engine & Scene Configuration ---
+    // --- Engine Setup ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a2a6c);
     scene.fog = new THREE.FogExp2(0x1a2a6c, 0.008);
@@ -156,7 +155,7 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // --- Atmospheric Lights ---
+    // --- Lights ---
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
@@ -172,7 +171,7 @@
     sunLight.shadow.camera.bottom = -d;
     scene.add(sunLight);
 
-    // --- Character & Physics Parameters ---
+    // --- Variables ---
     let playerGroup, limbs = {};   
     let playerVelocity = new THREE.Vector3();
     let isGrounded = false;
@@ -192,13 +191,12 @@
     let cameraAngleY = 0.3; 
     const cameraRadius = 9;
 
-    // Fixed Movement Inputs Matrix
     const moveInput = { x: 0, y: 0 };
     let wantToJump = false;
     let touchLookId = null;
     let prevLookTouch = { x: 0, y: 0 };
 
-    // --- Build Player Character Model ---
+    // --- Build Player Mesh ---
     function buildCharacterMesh() {
         playerGroup = new THREE.Group();
 
@@ -241,52 +239,31 @@
         scene.add(playerGroup);
     }
 
-    // --- Map Structure Builder (Asphalt Roads) ---
-    function createProceduralPlatform(x, y, z, width, depth, type = "road") {
-        let thickness = 0.4;
-        const group = new THREE.Group();
-        let mainMesh;
+    // --- Original Standard Block Platforms ---
+    function createProceduralPlatform(x, y, z, width, depth, type = "stone") {
+        let thickness = 0.6;
+        let geometry = new THREE.BoxGeometry(width, thickness, depth);
+        let material;
 
-        if (type === "checkpoint") {
-            const geo = new THREE.BoxGeometry(width, thickness, depth);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x2ed573, emissive: 0x114422, roughness: 0.3 });
-            mainMesh = new THREE.Mesh(geo, mat);
-            group.add(mainMesh);
-        } else if (type === "pipe") {
-            const geo = new THREE.CylinderGeometry(width, width, depth, 16);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x747d8c, metalness: 0.8, roughness: 0.2 });
-            mainMesh = new THREE.Mesh(geo, mat);
-            mainMesh.rotation.x = Math.PI / 2;
+        if (type === "pipe") {
+            geometry = new THREE.CylinderGeometry(width, width, depth, 16);
+            material = new THREE.MeshStandardMaterial({ color: 0x747d8c, metalness: 0.8, roughness: 0.2 });
             thickness = width * 2;
-            group.add(mainMesh);
+        } else if (type === "checkpoint") {
+            material = new THREE.MeshStandardMaterial({ color: 0x2ed573, emissive: 0x114422, roughness: 0.3 });
         } else {
-            // Road Base Platform Construction
-            const asphaltGeo = new THREE.BoxGeometry(width, thickness, depth);
-            const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
-            mainMesh = new THREE.Mesh(asphaltGeo, asphaltMat);
-            group.add(mainMesh);
-
-            // Yellow Center Divider Strip Line
-            const lineGeo = new THREE.BoxGeometry(0.15, 0.02, depth * 0.6);
-            const lineMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 1.0 });
-            const lineMesh = new THREE.Mesh(lineGeo, lineMat);
-            lineMesh.position.set(0, (thickness / 2) + 0.01, 0);
-            group.add(lineMesh);
+            material = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
         }
 
-        group.position.set(x, y, z);
-        
-        group.traverse((child) => {
-            if (child.isMesh) {
-                child.receiveShadow = true;
-                child.castShadow = true;
-            }
-        });
-        
-        scene.add(group);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, y, z);
+        if (type === "pipe") mesh.rotation.x = Math.PI / 2;
+        mesh.receiveShadow = true;
+        mesh.castShadow = true;
+        scene.add(mesh);
 
         const bounds = {
-            mesh: group,
+            mesh: mesh,
             type: type,
             minX: x - width/2, maxX: x + width/2,
             minZ: z - depth/2, maxZ: z + depth/2,
@@ -322,14 +299,14 @@
             } else if (randType > 0.82) {
                 createProceduralPlatform(nextX, nextY, nextZ, 0.25, 4.5, "pipe");
             } else {
-                let w = Math.max(1.6, 4.5 - (nextY * 0.015)); 
-                let d = Math.max(2.5, 6.0 - (nextY * 0.015));
-                createProceduralPlatform(nextX, nextY, nextZ, w, d, "road");
+                let w = Math.max(1.5, 4.5 - (nextY * 0.015)); 
+                let d = Math.max(1.5, 4.5 - (nextY * 0.015));
+                createProceduralPlatform(nextX, nextY, nextZ, w, d, "stone");
             }
         }
     }
 
-    // --- ACCURATE TOUCH INPUT RIG ---
+    // --- JOYSTICK REWRITE ENGINE ---
     const joystickContainer = document.getElementById('joystick-container');
     const joystickKnob = document.getElementById('joystick-knob');
     const jumpButton = document.getElementById('jump-button');
@@ -342,26 +319,21 @@
         joystickTop = rect.top + (rect.height / 2);
     }
     window.addEventListener('resize', calculateJoystickBounds);
-    window.addEventListener('orientationchange', () => setTimeout(calculateJoystickBounds, 200));
 
     window.addEventListener('touchstart', (e) => {
         calculateJoystickBounds();
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
             
-            // Check explicit hit target criteria for Jump Action
             if (touch.target === jumpButton) {
                 wantToJump = true;
                 continue;
             }
 
-            // Route Left side screen region touches directly to the Joystick
             if (touch.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                 joystickTouchId = touch.identifier;
                 handleJoystickCalculation(touch.clientX, touch.clientY);
-            } 
-            // Route Right side screen region touches to Look Swipe Camera Action
-            else if (touch.clientX >= window.innerWidth / 2 && touchLookId === null) {
+            } else if (touch.clientX >= window.innerWidth / 2 && touchLookId === null) {
                 touchLookId = touch.identifier;
                 prevLookTouch = { x: touch.clientX, y: touch.clientY };
             }
@@ -391,8 +363,7 @@
             const touch = e.changedTouches[i];
             if (touch.identifier === joystickTouchId) {
                 joystickTouchId = null;
-                moveInput.x = 0;
-                moveInput.y = 0;
+                moveInput.x = 0; moveInput.y = 0;
                 joystickKnob.style.transform = `translate(0px, 0px)`;
             } else if (touch.identifier === touchLookId) {
                 touchLookId = null;
@@ -407,26 +378,22 @@
         let dy = clientY - joystickTop;
         let dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Clamp knob movement exactly within target container shell radius
         if (dist > joystickRadius) {
             dx = (dx / dist) * joystickRadius;
             dy = (dy / dist) * joystickRadius;
-            dist = joystickRadius;
         }
 
-        // Map correct directional matrix axis data vectors
         moveInput.x = dx / joystickRadius;
         moveInput.y = dy / joystickRadius;
-
         joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
     }
 
-    // --- Core Architecture Processing Loops ---
+    // --- Core Architecture Loops ---
     function init() {
         platforms.forEach(p => scene.remove(p.mesh));
         platforms = [];
 
-        createProceduralPlatform(0, -0.2, 0, 10, 10, "road");
+        createProceduralPlatform(0, -0.3, 0, 10, 10, "stone");
 
         if(!playerGroup) buildCharacterMesh();
         
@@ -447,19 +414,13 @@
     function updatePhysicsAndAnimations() {
         playerVelocity.y += gravity;
 
-        // Vector directional calculations anchored dynamically to camera orbit angles
         let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
         let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
 
         let moveDirection = new THREE.Vector3();
         
-        // Link joystick parameters straight into directional force lines
-        if (Math.abs(moveInput.y) > 0.02) {
-            moveDirection.add(forward.clone().multiplyScalar(-moveInput.y));
-        }
-        if (Math.abs(moveInput.x) > 0.02) {
-            moveDirection.add(right.clone().multiplyScalar(moveInput.x));
-        }
+        if (Math.abs(moveInput.y) > 0.02) moveDirection.add(forward.clone().multiplyScalar(-moveInput.y));
+        if (Math.abs(moveInput.x) > 0.02) moveDirection.add(right.clone().multiplyScalar(moveInput.x));
         
         let isMoving = moveDirection.lengthSq() > 0;
         moveDirection.normalize().multiplyScalar(maxMoveSpeed);
@@ -485,7 +446,7 @@
             limbs.leftArm.rotation.x *= 0.8; limbs.rightArm.rotation.x *= 0.8;
         }
 
-        // --- Non-Clipping Boundary Collision Matrix ---
+        // --- Head-Bumping Non-Clipping Collisions ---
         isGrounded = false;
         let pX = playerGroup.position.x;
         let pY = playerGroup.position.y;
@@ -498,7 +459,6 @@
             if (pX + 0.3 > p.minX && pX - 0.3 < p.maxX &&
                 pZ + 0.3 > p.minZ && pZ - 0.3 < p.maxZ) {
                 
-                // Falling Ground Intersection Checks
                 if (playerVelocity.y <= 0) {
                     if (pY <= p.topY + 0.1 && pY >= p.topY - 0.4) {
                         playerGroup.position.y = p.topY;
@@ -516,9 +476,7 @@
                         }
                         break;
                     }
-                } 
-                // Ceiling Bump Protection Rules
-                else if (playerVelocity.y > 0) {
+                } else if (playerVelocity.y > 0) {
                     let headY = pY + characterHeight;
                     if (headY >= p.bottomY - 0.1 && headY <= p.topY) {
                         playerGroup.position.y = p.bottomY - characterHeight - 0.05;
