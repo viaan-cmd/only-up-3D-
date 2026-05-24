@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="google-site-verification" content="0a0GsyBJrFqG_jZNM_x8fXwHw9sYQPtkoZN8opbvCpA" />
     <meta charset="UTF-8">
-    <title>Ascent: Only Up 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="google-site-verification" content="0a0GsyBJrFqG_jZNM_x8fXwHw9sFh_Xf6_b0G5MhREw" />
+    
+    <title>Ascent: Only Up 3D (Joystick Fixed)</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #050510;
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #050510; 
             user-select: none;
             -webkit-user-select: none;
+            touch-action: none;
         }
-
         #ui {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
             pointer-events: none;
@@ -30,13 +32,12 @@
             border: 1px solid rgba(255,255,255,0.1);
             z-index: 5;
         }
-
         #checkpoint-toast {
             position: absolute;
-            top: 85px;
+            top: 95px;
             left: 20px;
             color: #2ed573;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             opacity: 0;
@@ -44,652 +45,565 @@
             pointer-events: none;
             z-index: 5;
         }
-
         #gameover-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(10, 10, 25, 0.9);
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             color: white;
-            z-index: 10;
+            z-index: 20;
         }
-
-        #gameover-screen h1 {
-            font-size: 64px;
-            color: #ff4757;
-            margin-bottom: 5px;
-            text-shadow: 0 0 20px rgba(255,71,87,0.5);
-        }
-
-        #gameover-screen p {
-            font-size: 24px;
-            margin-bottom: 30px;
-            color: #a4b0be;
-        }
-
+        #gameover-screen h1 { font-size: 48px; color: #ff4757; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,71,87,0.5); }
+        #gameover-screen p { font-size: 20px; margin-bottom: 30px; color: #a4b0be; }
         .btn {
-            padding: 12px 30px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            background: linear-gradient(135deg, #2ed573, #26af5f);
-            border: none;
-            color: white;
-            border-radius: 6px;
-            box-shadow: 0 5px 15px rgba(46,213,115,0.4);
-            transition: transform 0.2s;
-            pointer-events: auto;
+            padding: 12px 30px; font-size: 18px; font-weight: bold; cursor: pointer; 
+            background: linear-gradient(135deg, #2ed573, #26af5f); border: none; 
+            color: white; border-radius: 6px; box-shadow: 0 5px 15px rgba(46,213,115,0.4);
         }
-
-        .btn:active {
-            transform: scale(0.95);
-        }
-
-        #instructions {
-            position: absolute;
-            bottom: 25px;
-            width: 100%;
-            text-align: center;
-            color: rgba(255,255,255,0.7);
-            font-size: 15px;
-            letter-spacing: 1px;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        /* Device Selection Screen Style */
-        #device-selection {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 25, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            z-index: 1000;
-        }
-
-        #device-selection h2 {
-            font-size: 36px;
-            margin-bottom: 20px;
-            color: #fff;
-        }
-
-        .choice-btn {
-            padding: 15px 40px;
-            font-size: 22px;
-            margin: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            background: linear-gradient(135deg, #2ed573, #26af5f);
-            border: none;
-            color: white;
-            border-radius: 6px;
-            box-shadow: 0 5px 15px rgba(46,213,115,0.4);
-            transition: transform 0.1s;
-        }
-
-        .choice-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* Virtual Joystick Interface Style */
-        #mobile-ui {
-            position: fixed;
-            bottom: 30px;
-            left: 0;
-            width: 100%;
-            height: 150px;
-            z-index: 999;
-            display: none;
-            pointer-events: none;
-        }
-
+        
+        /* --- HIGH PERFORMANCE JOYSTICK STYLING --- */
         #joystick-container {
             position: absolute;
-            bottom: 10px;
-            left: 40px;
-            width: 100px;
-            height: 100px;
-            background: rgba(255,255,255,0.2);
+            bottom: 50px;
+            left: 50px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 3px solid rgba(255, 255, 255, 0.35);
             border-radius: 50%;
-            border: 2px solid #fff;
-            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10;
             touch-action: none;
         }
-
         #joystick-knob {
             position: absolute;
-            top: 30px;
-            left: 30px;
-            width: 40px;
-            height: 40px;
-            background: #fff;
+            top: 40px;
+            left: 40px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.85);
             border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            touch-action: none;
+            transition: transform 0.05s linear;
         }
-
-        #action-btn-container {
+        #jump-button {
             position: absolute;
-            bottom: 30px;
-            right: 40px;
-            pointer-events: auto;
-        }
-
-        #btn-mobile-jump {
-            width: 75px;
-            height: 75px;
-            background: rgba(46, 213, 115, 0.6);
-            border: 2px solid #fff;
+            bottom: 65px;
+            right: 50px;
+            width: 95px;
+            height: 95px;
+            background: rgba(46, 213, 115, 0.55);
+            border: 3px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%;
             color: white;
+            font-size: 18px;
             font-weight: bold;
-            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10;
             touch-action: none;
+        }
+        #jump-button:active {
+            background: rgba(46, 213, 115, 0.85);
+            transform: scale(0.92);
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            pointer-events: none;
+            text-align: right;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="device-selection">
-        <h2>Choose Your Controls</h2>
-        <button class="choice-btn" onclick="selectDevice('pc')">💻 PC (Keyboard)</button>
-        <button class="choice-btn" onclick="selectDevice('mobile')">📱 Mobile (Joystick)</button>
-    </div>
-
-    <div id="ui">Altitude: <span id="height-score">0</span>m <br><span style="font-size:14px; color:#aaa;">Last Checkpoint: <span id="chk-height">0</span>m</span></div>
+    <div id="ui">Altitude: <span id="height-score">0</span>m <br><span style="font-size:12px; color:#aaa;">Checkpoint: <span id="chk-height">0</span>m</span></div>
     <div id="checkpoint-toast">CHECKPOINT ACTIVATED!</div>
-    <div id="instructions" id="instruction-text">WASD / Arrow Keys to Run | Spacebar to Jump | Drag screen to rotate camera</div>
-
+    <div id="instructions">Left Side: Drag Joystick to Move<br>Right Side: Swipe screen to Turn Camera</div>
+    
+    <div id="joystick-container">
+        <div id="joystick-knob"></div>
+    </div>
+    <div id="jump-button">JUMP</div>
+    
     <div id="gameover-screen">
         <h1>FALLEN!</h1>
         <p>Highest Reached: <span id="final-score">0</span>m</p>
-        <button class="btn" onclick="respawnAtCheckpoint()">Respawn at Checkpoint</button>
+        <button class="btn" onclick="respawnAtCheckpoint()">Respawn</button>
     </div>
 
-    <div id="mobile-ui">
-        <div id="joystick-container">
-            <div id="joystick-knob"></div>
-        </div>
-        <div id="action-btn-container">
-            <button id="btn-mobile-jump">JUMP</button>
-        </div>
-    </div>
+<script>
+    // --- Engine & Scene Configuration ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a2a6c);
+    scene.fog = new THREE.FogExp2(0x1a2a6c, 0.008);
 
-    <script>
-        // --- DEVICE & UI HANDLING FUNCTIONS ---
-        function selectDevice(type) {
-            document.getElementById('device-selection').style.display = 'none';
-            if (type === 'mobile') {
-                document.getElementById('mobile-ui').style.display = 'block';
-                document.getElementById('instruction-text').innerText = 'Left Joystick to Move | JUMP Button to Leap | Drag screen to look';
-                setupJoystick();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // --- Atmospheric Lights ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffdfb3, 1.2);
+    sunLight.position.set(40, 100, 20);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 1048;
+    sunLight.shadow.mapSize.height = 1048;
+    const d = 50;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    scene.add(sunLight);
+
+    // --- Character & Physics Parameters ---
+    let playerGroup, limbs = {};   
+    let playerVelocity = new THREE.Vector3();
+    let isGrounded = false;
+    const gravity = -0.014;
+    const jumpForce = 0.36;
+    const maxMoveSpeed = 0.14;
+
+    let platforms = [];
+    let lastCheckpointPos = new THREE.Vector3(0, 0.5, 0);
+    let lastCheckpointHeightMetric = 0;
+    
+    let highestY = 0;
+    let gameOver = false;
+    let animationTime = 0;
+
+    let cameraAngleX = 0;
+    let cameraAngleY = 0.3; 
+    const cameraRadius = 9;
+
+    // Fixed Movement Inputs Matrix
+    const moveInput = { x: 0, y: 0 };
+    let wantToJump = false;
+    let touchLookId = null;
+    let prevLookTouch = { x: 0, y: 0 };
+
+    // --- Build Player Character Model ---
+    function buildCharacterMesh() {
+        playerGroup = new THREE.Group();
+
+        const shirtMat = new THREE.MeshStandardMaterial({ color: 0x2e86de, roughness: 0.5 });
+        const pantsMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.4 });
+
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.4), shirtMat);
+        torso.position.y = 0.95;
+        torso.castShadow = true;
+        playerGroup.add(torso);
+
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), skinMat);
+        head.position.y = 1.6;
+        head.castShadow = true;
+        playerGroup.add(head);
+
+        const legGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+        limbs.leftLeg = new THREE.Mesh(legGeo, pantsMat);
+        limbs.leftLeg.position.set(-0.2, 0.35, 0);
+        limbs.leftLeg.castShadow = true;
+        playerGroup.add(limbs.leftLeg);
+
+        limbs.rightLeg = new THREE.Mesh(legGeo, pantsMat);
+        limbs.rightLeg.position.set(0.2, 0.35, 0);
+        limbs.rightLeg.castShadow = true;
+        playerGroup.add(limbs.rightLeg);
+
+        const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+        limbs.leftArm = new THREE.Mesh(armGeo, shirtMat);
+        limbs.leftArm.position.set(-0.48, 0.95, 0);
+        limbs.leftArm.castShadow = true;
+        playerGroup.add(limbs.leftArm);
+
+        limbs.rightArm = new THREE.Mesh(armGeo, shirtMat);
+        limbs.rightArm.position.set(0.48, 0.95, 0);
+        limbs.rightArm.castShadow = true;
+        playerGroup.add(limbs.rightArm);
+
+        scene.add(playerGroup);
+    }
+
+    // --- Map Structure Builder (Asphalt Roads) ---
+    function createProceduralPlatform(x, y, z, width, depth, type = "road") {
+        let thickness = 0.4;
+        const group = new THREE.Group();
+        let mainMesh;
+
+        if (type === "checkpoint") {
+            const geo = new THREE.BoxGeometry(width, thickness, depth);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x2ed573, emissive: 0x114422, roughness: 0.3 });
+            mainMesh = new THREE.Mesh(geo, mat);
+            group.add(mainMesh);
+        } else if (type === "pipe") {
+            const geo = new THREE.CylinderGeometry(width, width, depth, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x747d8c, metalness: 0.8, roughness: 0.2 });
+            mainMesh = new THREE.Mesh(geo, mat);
+            mainMesh.rotation.x = Math.PI / 2;
+            thickness = width * 2;
+            group.add(mainMesh);
+        } else {
+            // Road Base Platform Construction
+            const asphaltGeo = new THREE.BoxGeometry(width, thickness, depth);
+            const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+            mainMesh = new THREE.Mesh(asphaltGeo, asphaltMat);
+            group.add(mainMesh);
+
+            // Yellow Center Divider Strip Line
+            const lineGeo = new THREE.BoxGeometry(0.15, 0.02, depth * 0.6);
+            const lineMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 1.0 });
+            const lineMesh = new THREE.Mesh(lineGeo, lineMat);
+            lineMesh.position.set(0, (thickness / 2) + 0.01, 0);
+            group.add(lineMesh);
+        }
+
+        group.position.set(x, y, z);
+        
+        group.traverse((child) => {
+            if (child.isMesh) {
+                child.receiveShadow = true;
+                child.castShadow = true;
             }
+        });
+        
+        scene.add(group);
+
+        const bounds = {
+            mesh: group,
+            type: type,
+            minX: x - width/2, maxX: x + width/2,
+            minZ: z - depth/2, maxZ: z + depth/2,
+            y: y,
+            thickness: thickness,
+            topY: y + (thickness / 2),
+            bottomY: y - (thickness / 2)
+        };
+
+        if (type === "pipe") {
+            bounds.minX = x - width; bounds.maxX = x + width;
         }
+        platforms.push(bounds);
+    }
 
-        function setupJoystick() {
-            const container = document.getElementById('joystick-container');
-            const knob = document.getElementById('joystick-knob');
-            const jumpBtn = document.getElementById('btn-mobile-jump');
-            let activeTouchId = null;
-            const baseRadius = 50;
+    function generateClimbMap() {
+        while (platforms.length < 35) {
+            let lastY = platforms.length > 0 ? platforms[platforms.length - 1].y : 0;
+            let lastX = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.x : 0;
+            let lastZ = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.z : 0;
 
-            container.addEventListener('touchstart', (e) => {
-                if (activeTouchId === null) activeTouchId = e.changedTouches[0].identifier;
-            });
+            let stepY = 2.0 + Math.random() * 1.0; 
+            let stepX = (Math.random() - 0.5) * 6.5;
+            let stepZ = (Math.random() - 0.5) * 6.5;
 
-            container.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                let touch = null;
-                for (let t of e.touches) {
-                    if (t.identifier === activeTouchId) { touch = t; break; }
-                }
-                if (!touch) return;
+            let nextY = lastY + stepY;
+            let nextX = lastX + stepX;
+            let nextZ = lastZ + stepZ;
 
-                const rect = container.getBoundingClientRect();
-                const centerX = rect.left + baseRadius;
-                const centerY = rect.top + baseRadius;
-
-                let dx = touch.clientX - centerX;
-                let dy = touch.clientY - centerY;
-                let distance = Math.sqrt(dx*dx + dy*dy);
-
-                if (distance > baseRadius) {
-                    dx = (dx / distance) * baseRadius;
-                    dy = (dy / distance) * baseRadius;
-                }
-
-                knob.style.transform = `translate(${dx}px, ${dy}px)`;
-
-                // Maps vector calculations directly into physics inputs
-                keys.d = dx > 15;
-                keys.a = dx < -15;
-                keys.s = dy > 15;
-                keys.w = dy < -15;
-            });
-
-            container.addEventListener('touchend', () => {
-                activeTouchId = null;
-                knob.style.transform = 'translate(0px, 0px)';
-                keys.w = keys.a = keys.s = keys.d = false;
-            });
-
-            jumpBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys.Space = true;
-            });
-            jumpBtn.addEventListener('touchend', () => {
-                keys.Space = false;
-            });
-        }
-
-        // --- CORE ENGINE & WORLD CONFIGURATION ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a2a6c);
-        scene.fog = new THREE.FogExp2(0x1a2a6c, 0.008);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(renderer.domElement);
-
-        // --- LIGHTING SETUP ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-        scene.add(ambientLight);
-
-        const sunLight = new THREE.DirectionalLight(0xffdfb3, 1.2);
-        sunLight.position.set(40, 100, 20);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        const d = 50;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        scene.add(sunLight);
-
-        // --- PHYSICS / ENGINE VALUES ---
-        let playerGroup;
-        let limbs = {};
-        let playerVelocity = new THREE.Vector3();
-        let isGrounded = false;
-        const gravity = -0.014;
-        const jumpForce = 0.36;
-        const moveSpeed = 0.14;
-
-        let platforms = [];
-        let lastCheckpointPos = new THREE.Vector3(0, 0.5, 0);
-        let lastCheckpointHeightMetric = 0;
-        let highestY = 0;
-        let gameOver = false;
-        let animationTime = 0;
-
-        const keys = { w: false, a: false, s: false, d: false, Space: false };
-
-        let cameraAngleX = 0;
-        let cameraAngleY = 0.2;
-        const cameraRadius = 9;
-        let isMouseDown = false;
-        let prevMousePos = { x: 0, y: 0 };
-
-        // --- CHARACTER ASSEMBLY ---
-        function buildCharacterMesh() {
-            playerGroup = new THREE.Group();
-            const shirtMat = new THREE.MeshStandardMaterial({ color: 0x2e86de, roughness: 0.5 });
-            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 });
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.4 });
-
-            // Torso
-            const torsoGeo = new THREE.BoxGeometry(0.7, 0.9, 0.4);
-            const torso = new THREE.Mesh(torsoGeo, shirtMat);
-            torso.position.y = 0.95;
-            torso.castShadow = true;
-            playerGroup.add(torso);
-
-            // Head
-            const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.y = 1.6;
-            head.castShadow = true;
-            playerGroup.add(head);
-
-            // Legs
-            const legGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
-            limbs.leftLeg = new THREE.Mesh(legGeo, pantsMat);
-            limbs.leftLeg.position.set(-0.2, 0.35, 0);
-            limbs.leftLeg.castShadow = true;
-            playerGroup.add(limbs.leftLeg);
-
-            limbs.rightLeg = new THREE.Mesh(legGeo, pantsMat);
-            limbs.rightLeg.position.set(0.2, 0.35, 0);
-            limbs.rightLeg.castShadow = true;
-            playerGroup.add(limbs.rightLeg);
-
-            // Arms
-            const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
-            limbs.leftArm = new THREE.Mesh(armGeo, shirtMat);
-            limbs.leftArm.position.set(-0.48, 0.95, 0);
-            limbs.leftArm.castShadow = true;
-            playerGroup.add(limbs.leftArm);
-
-            limbs.rightArm = new THREE.Mesh(armGeo, shirtMat);
-            limbs.rightArm.position.set(0.48, 0.95, 0);
-            limbs.rightArm.castShadow = true;
-            playerGroup.add(limbs.rightArm);
-
-            scene.add(playerGroup);
-        }
-
-        // --- PROCEDURAL GENERATION MAP SYSTEM ---
-        function createProceduralPlatform(x, y, z, width, depth, type = "stone") {
-            let thickness = 0.6;
-            let geometry = new THREE.BoxGeometry(width, thickness, depth);
-            let material;
-
-            if (type === "pipe") {
-                geometry = new THREE.CylinderGeometry(width, width, depth, 16);
-                material = new THREE.MeshStandardMaterial({ color: 0x747d8c, metalness: 0.8, roughness: 0.2 });
-                thickness = width * 2;
-            } else if (type === "checkpoint") {
-                material = new THREE.MeshStandardMaterial({ color: 0x2ed573, emissive: 0x114422, roughness: 0.3 });
+            let randType = Math.random();
+            if (platforms.length % 12 === 0 && platforms.length > 0) {
+                createProceduralPlatform(nextX, nextY, nextZ, 4, 4, "checkpoint");
+            } else if (randType > 0.82) {
+                createProceduralPlatform(nextX, nextY, nextZ, 0.25, 4.5, "pipe");
             } else {
-                material = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.9 });
+                let w = Math.max(1.6, 4.5 - (nextY * 0.015)); 
+                let d = Math.max(2.5, 6.0 - (nextY * 0.015));
+                createProceduralPlatform(nextX, nextY, nextZ, w, d, "road");
+            }
+        }
+    }
+
+    // --- ACCURATE TOUCH INPUT RIG ---
+    const joystickContainer = document.getElementById('joystick-container');
+    const joystickKnob = document.getElementById('joystick-knob');
+    const jumpButton = document.getElementById('jump-button');
+
+    let joystickLeft = 0, joystickTop = 0, joystickRadius = 65, joystickTouchId = null;
+
+    function calculateJoystickBounds() {
+        const rect = joystickContainer.getBoundingClientRect();
+        joystickLeft = rect.left + (rect.width / 2);
+        joystickTop = rect.top + (rect.height / 2);
+    }
+    window.addEventListener('resize', calculateJoystickBounds);
+    window.addEventListener('orientationchange', () => setTimeout(calculateJoystickBounds, 200));
+
+    window.addEventListener('touchstart', (e) => {
+        calculateJoystickBounds();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            // Check explicit hit target criteria for Jump Action
+            if (touch.target === jumpButton) {
+                wantToJump = true;
+                continue;
             }
 
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(x, y, z);
-            if (type === "pipe") mesh.rotation.x = Math.PI / 2;
-            mesh.receiveShadow = true;
-            mesh.castShadow = true;
-            scene.add(mesh);
-
-            const bounds = {
-                mesh: mesh,
-                type: type,
-                minX: x - width/2,
-                maxX: x + width/2,
-                minZ: z - depth/2,
-                maxZ: z + depth/2,
-                y: y,
-                thickness: thickness,
-                topY: y + (thickness / 2),
-                bottomY: y - (thickness / 2)
-            };
-
-            if (type === "pipe") {
-                bounds.minX = x - width;
-                bounds.maxX = x + width;
+            // Route Left side screen region touches directly to the Joystick
+            if (touch.clientX < window.innerWidth / 2 && joystickTouchId === null) {
+                joystickTouchId = touch.identifier;
+                handleJoystickCalculation(touch.clientX, touch.clientY);
+            } 
+            // Route Right side screen region touches to Look Swipe Camera Action
+            else if (touch.clientX >= window.innerWidth / 2 && touchLookId === null) {
+                touchLookId = touch.identifier;
+                prevLookTouch = { x: touch.clientX, y: touch.clientY };
             }
-            platforms.push(bounds);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            if (touch.identifier === joystickTouchId) {
+                handleJoystickCalculation(touch.clientX, touch.clientY);
+            } else if (touch.identifier === touchLookId) {
+                let dx = touch.clientX - prevLookTouch.x;
+                let dy = touch.clientY - prevLookTouch.y;
+                
+                cameraAngleX -= dx * 0.0075;
+                cameraAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, cameraAngleY + dy * 0.0075));
+                
+                prevLookTouch = { x: touch.clientX, y: touch.clientY };
+            }
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === joystickTouchId) {
+                joystickTouchId = null;
+                moveInput.x = 0;
+                moveInput.y = 0;
+                joystickKnob.style.transform = `translate(0px, 0px)`;
+            } else if (touch.identifier === touchLookId) {
+                touchLookId = null;
+            } else if (touch.target === jumpButton) {
+                wantToJump = false;
+            }
+        }
+    });
+
+    function handleJoystickCalculation(clientX, clientY) {
+        let dx = clientX - joystickLeft;
+        let dy = clientY - joystickTop;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        // Clamp knob movement exactly within target container shell radius
+        if (dist > joystickRadius) {
+            dx = (dx / dist) * joystickRadius;
+            dy = (dy / dist) * joystickRadius;
+            dist = joystickRadius;
         }
 
-        function generateClimbMap() {
-            while (platforms.length < 35) {
-                let lastY = platforms.length > 0 ? platforms[platforms.length - 1].y : 0;
-                let lastX = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.x : 0;
-                let lastZ = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.z : 0;
+        // Map correct directional matrix axis data vectors
+        moveInput.x = dx / joystickRadius;
+        moveInput.y = dy / joystickRadius;
 
-                let stepY = 2.0 + Math.random() * 1.0;
-                let stepX = (Math.random() - 0.5) * 6;
-                let stepZ = (Math.random() - 0.5) * 6;
+        joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
 
-                let nextY = lastY + stepY;
-                let nextX = lastX + stepX;
-                let nextZ = lastZ + stepZ;
-                let randType = Math.random();
+    // --- Core Architecture Processing Loops ---
+    function init() {
+        platforms.forEach(p => scene.remove(p.mesh));
+        platforms = [];
 
-                if (platforms.length % 12 === 0 && platforms.length > 0) {
-                    createProceduralPlatform(nextX, nextY, nextZ, 4, 4, "checkpoint");
-                } else if (randType > 0.75) {
-                    createProceduralPlatform(nextX, nextY, nextZ, 0.3, 5, "pipe");
-                } else {
-                    let w = Math.max(1.5, 4.5 - (nextY * 0.015));
-                    let d = Math.max(1.5, 4.5 - (nextY * 0.015));
-                    createProceduralPlatform(nextX, nextY, nextZ, w, d, "stone");
+        createProceduralPlatform(0, -0.2, 0, 10, 10, "road");
+
+        if(!playerGroup) buildCharacterMesh();
+        
+        playerGroup.position.set(0, 0.0, 0);
+        playerVelocity.set(0,0,0);
+        highestY = 0;
+        lastCheckpointPos.set(0, 0.0, 0);
+        lastCheckpointHeightMetric = 0;
+        gameOver = false;
+        
+        document.getElementById('gameover-screen').style.display = 'none';
+        document.getElementById('chk-height').innerText = "0";
+
+        generateClimbMap();
+        setTimeout(calculateJoystickBounds, 400);
+    }
+
+    function updatePhysicsAndAnimations() {
+        playerVelocity.y += gravity;
+
+        // Vector directional calculations anchored dynamically to camera orbit angles
+        let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
+        let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
+
+        let moveDirection = new THREE.Vector3();
+        
+        // Link joystick parameters straight into directional force lines
+        if (Math.abs(moveInput.y) > 0.02) {
+            moveDirection.add(forward.clone().multiplyScalar(-moveInput.y));
+        }
+        if (Math.abs(moveInput.x) > 0.02) {
+            moveDirection.add(right.clone().multiplyScalar(moveInput.x));
+        }
+        
+        let isMoving = moveDirection.lengthSq() > 0;
+        moveDirection.normalize().multiplyScalar(maxMoveSpeed);
+        
+        playerVelocity.x = moveDirection.x;
+        playerVelocity.z = moveDirection.z;
+
+        playerGroup.position.x += playerVelocity.x;
+        playerGroup.position.y += playerVelocity.y;
+        playerGroup.position.z += playerVelocity.z;
+
+        if (isMoving) {
+            let targetAngle = Math.atan2(playerVelocity.x, playerVelocity.z);
+            playerGroup.rotation.y = targetAngle;
+            
+            animationTime += 0.15;
+            limbs.leftLeg.rotation.x = Math.sin(animationTime) * 0.6;
+            limbs.rightLeg.rotation.x = -Math.sin(animationTime) * 0.6;
+            limbs.leftArm.rotation.x = -Math.sin(animationTime) * 0.5;
+            limbs.rightArm.rotation.x = Math.sin(animationTime) * 0.5;
+        } else {
+            limbs.leftLeg.rotation.x *= 0.8; limbs.rightLeg.rotation.x *= 0.8;
+            limbs.leftArm.rotation.x *= 0.8; limbs.rightArm.rotation.x *= 0.8;
+        }
+
+        // --- Non-Clipping Boundary Collision Matrix ---
+        isGrounded = false;
+        let pX = playerGroup.position.x;
+        let pY = playerGroup.position.y;
+        let pZ = playerGroup.position.z;
+        let characterHeight = 1.8; 
+
+        for (let i = 0; i < platforms.length; i++) {
+            let p = platforms[i];
+            
+            if (pX + 0.3 > p.minX && pX - 0.3 < p.maxX &&
+                pZ + 0.3 > p.minZ && pZ - 0.3 < p.maxZ) {
+                
+                // Falling Ground Intersection Checks
+                if (playerVelocity.y <= 0) {
+                    if (pY <= p.topY + 0.1 && pY >= p.topY - 0.4) {
+                        playerGroup.position.y = p.topY;
+                        playerVelocity.y = 0;
+                        isGrounded = true;
+
+                        if (p.type === "checkpoint" && lastCheckpointHeightMetric < p.y) {
+                            lastCheckpointPos.set(pX, p.topY, pZ);
+                            lastCheckpointHeightMetric = p.y;
+                            document.getElementById('chk-height').innerText = Math.floor(p.y);
+                            
+                            let toast = document.getElementById('checkpoint-toast');
+                            toast.style.opacity = '1';
+                            setTimeout(() => toast.style.opacity = '0', 2000);
+                        }
+                        break;
+                    }
+                } 
+                // Ceiling Bump Protection Rules
+                else if (playerVelocity.y > 0) {
+                    let headY = pY + characterHeight;
+                    if (headY >= p.bottomY - 0.1 && headY <= p.topY) {
+                        playerGroup.position.y = p.bottomY - characterHeight - 0.05;
+                        playerVelocity.y = 0; 
+                        break;
+                    }
                 }
             }
         }
 
-        function init() {
-            platforms.forEach(p => scene.remove(p.mesh));
-            platforms = [];
-            createProceduralPlatform(0, -0.3, 0, 10, 10, "stone");
+        if (wantToJump && isGrounded) {
+            playerVelocity.y = jumpForce;
+            isGrounded = false;
+            wantToJump = false; 
+        }
 
-            if(!playerGroup) {
-                buildCharacterMesh();
-            }
+        if (!isGrounded) {
+            limbs.leftLeg.rotation.x = 0.2; limbs.rightLeg.rotation.x = -0.1;
+            limbs.leftArm.rotation.x = -0.4; limbs.rightArm.rotation.x = -0.4;
+        }
 
-            playerGroup.position.set(0, 0.0, 0);
-            playerVelocity.set(0,0,0);
-            highestY = 0;
-            lastCheckpointPos.set(0, 0.0, 0);
-            lastCheckpointHeightMetric = 0;
-            gameOver = false;
+        if (playerGroup.position.y > highestY) {
+            highestY = playerGroup.position.y;
+            document.getElementById('height-score').innerText = Math.floor(highestY);
+            
+            let skyColorHex = Math.max(0x050510, 0x1a2a6c - (Math.floor(highestY) * 200));
+            scene.background.setHex(skyColorHex);
+            scene.fog.color.setHex(skyColorHex);
+        }
 
-            document.getElementById('gameover-screen').style.display = 'none';
-            document.getElementById('chk-height').innerText = "0";
+        if (platforms.length > 0 && playerGroup.position.y - platforms[0].y > 45) {
+            scene.remove(platforms[0].mesh);
+            platforms.shift();
             generateClimbMap();
         }
 
-        // --- DESKTOP KEYBOARD BINDINGS ---
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
-            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
-            if (e.code === 'Space') keys.Space = true;
-        });
+        if (playerGroup.position.y < lastCheckpointPos.y - 25) {
+            triggerGameOverState();
+        }
+    }
 
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
-            if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
-            if (e.code === 'Space') keys.Space = false;
-        });
+    function updateCameraPosition() {
+        let tX = playerGroup.position.x + cameraRadius * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+        let tY = playerGroup.position.y + cameraRadius * Math.sin(cameraAngleY) + 1.2;
+        let tZ = playerGroup.position.z + cameraRadius * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
 
-        // --- CAMERA LOOK & ROTATION ENGINE ---
-        const startLook = (clientX, clientY) => {
-            isMouseDown = true;
-            prevMousePos = { x: clientX, y: clientY };
-        };
+        camera.position.set(tX, tY, tZ);
+        camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.0, playerGroup.position.z);
+        
+        sunLight.position.set(playerGroup.position.x + 30, playerGroup.position.y + 70, playerGroup.position.z + 20);
+        sunLight.shadow.camera.position.set(playerGroup.position.x, playerGroup.position.y, playerGroup.position.z);
+    }
 
-        const moveLook = (clientX, clientY) => {
-            if (isMouseDown) {
-                let dx = clientX - prevMousePos.x;
-                let dy = clientY - prevMousePos.y;
-                cameraAngleX -= dx * 0.007;
-                cameraAngleY = Math.max(0.02, Math.min(Math.PI/2 - 0.1, cameraAngleY + dy * 0.007));
-            }
-            prevMousePos = { x: clientX, y: clientY };
-        };
+    function triggerGameOverState() {
+        gameOver = true;
+        document.getElementById('final-score').innerText = Math.floor(highestY);
+        document.getElementById('gameover-screen').style.display = 'flex';
+    }
 
-        const endLook = () => isMouseDown = false;
+    function respawnAtCheckpoint() {
+        playerGroup.position.copy(lastCheckpointPos);
+        playerVelocity.set(0, 0, 0);
+        gameOver = false;
+        document.getElementById('gameover-screen').style.display = 'none';
+    }
 
-        // Desktop Mouse Looks
-        window.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('#joystick-container') || e.target.closest('#action-btn-container') || e.target.closest('.choice-btn')) return;
-            startLook(e.clientX, e.clientY);
-        });
-        window.addEventListener('pointerup', endLook);
-        window.addEventListener('pointermove', (e) => moveLook(e.clientX, e.clientY));
+    function animate() {
+        requestAnimationFrame(animate);
 
-        // Mobile Drag Screen Looks (Ignoring active UI containers)
-        window.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#joystick-container') || e.target.closest('#action-btn-container') || e.target.closest('.choice-btn')) return;
-            const t = e.touches[0];
-            startLook(t.clientX, t.clientY);
-        });
-        window.addEventListener('touchmove', (e) => {
-            if (e.target.closest('#joystick-container') || e.target.closest('#action-btn-container') || e.target.closest('.choice-btn')) return;
-            const t = e.touches[0];
-            moveLook(t.clientX, t.clientY);
-        });
-        window.addEventListener('touchend', endLook);
-
-        // --- PHYSICS CORE AND LOOP ANIMATION LOGIC ---
-        function updatePhysicsAndAnimations() {
-            playerVelocity.y += gravity;
-
-            let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
-            let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
-            let moveDirection = new THREE.Vector3();
-
-            if (keys.w) moveDirection.add(forward);
-            if (keys.s) moveDirection.add(forward.clone().negate());
-            if (keys.d) moveDirection.add(right);
-            if (keys.a) moveDirection.add(right.clone().negate());
-
-            let isMoving = moveDirection.lengthSq() > 0;
-            moveDirection.normalize().multiplyScalar(moveSpeed);
-
-            playerVelocity.x = moveDirection.x;
-            playerVelocity.z = moveDirection.z;
-
-            playerGroup.position.x += playerVelocity.x;
-            playerGroup.position.y += playerVelocity.y;
-            playerGroup.position.z += playerVelocity.z;
-
-            if (isMoving) {
-                let targetAngle = Math.atan2(playerVelocity.x, playerVelocity.z);
-                playerGroup.rotation.y = targetAngle;
-                animationTime += 0.15;
-                limbs.leftLeg.rotation.x = Math.sin(animationTime) * 0.6;
-                limbs.rightLeg.rotation.x = -Math.sin(animationTime) * 0.6;
-                limbs.leftArm.rotation.x = -Math.sin(animationTime) * 0.5;
-                limbs.rightArm.rotation.x = Math.sin(animationTime) * 0.5;
-            } else {
-                limbs.leftLeg.rotation.x *= 0.8;
-                limbs.rightLeg.rotation.x *= 0.8;
-                limbs.leftArm.rotation.x *= 0.8;
-                limbs.rightArm.rotation.x *= 0.8;
-            }
-
-            // --- RUN CODES FOR TWO-WAY COLLISION ENGINE ---
-            isGrounded = false;
-            let pX = playerGroup.position.x;
-            let pY = playerGroup.position.y;
-            let pZ = playerGroup.position.z;
-            let characterHeight = 1.8;
-
-            for (let i = 0; i < platforms.length; i++) {
-                let p = platforms[i];
-                if (pX + 0.3 > p.minX && pX - 0.3 < p.maxX && pZ + 0.3 > p.minZ && pZ - 0.3 < p.maxZ) {
-                    // Top Platform Down Landing Check
-                    if (playerVelocity.y <= 0) {
-                        if (pY <= p.topY + 0.1 && pY >= p.topY - 0.4) {
-                            playerGroup.position.y = p.topY;
-                            playerVelocity.y = 0;
-                            isGrounded = true;
-
-                            if (p.type === "checkpoint" && lastCheckpointHeightMetric < p.y) {
-                                lastCheckpointPos.set(pX, p.topY, pZ);
-                                lastCheckpointHeightMetric = p.y;
-                                document.getElementById('chk-height').innerText = Math.floor(p.y);
-                                let toast = document.getElementById('checkpoint-toast');
-                                toast.style.opacity = '1';
-                                setTimeout(() => toast.style.opacity = '0', 2000);
-                            }
-                            break;
-                        }
-                    }
-                    // Head Ceiling Bump Crash Check
-                    else if (playerVelocity.y > 0) {
-                        let headY = pY + characterHeight;
-                        if (headY >= p.bottomY - 0.1 && headY <= p.topY) {
-                            playerGroup.position.y = p.bottomY - characterHeight - 0.05;
-                            playerVelocity.y = 0;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (keys.Space && isGrounded) {
-                playerVelocity.y = jumpForce;
-                isGrounded = false;
-            }
-
-            if (!isGrounded) {
-                limbs.leftLeg.rotation.x = 0.2;
-                limbs.rightLeg.rotation.x = -0.1;
-                limbs.leftArm.rotation.x = -0.4;
-                limbs.rightArm.rotation.x = -0.4;
-            }
-
-            if (playerGroup.position.y > highestY) {
-                highestY = playerGroup.position.y;
-                document.getElementById('height-score').innerText = Math.floor(highestY);
-                let skyColorHex = Math.max(0x050510, 0x1a2a6c - (Math.floor(highestY) * 200));
-                scene.background.setHex(skyColorHex);
-                scene.fog.color.setHex(skyColorHex);
-            }
-
-            if (platforms.length > 0 && playerGroup.position.y - platforms[0].y > 45) {
-                scene.remove(platforms[0].mesh);
-                platforms.shift();
-                generateClimbMap();
-            }
-
-            if (playerGroup.position.y < lastCheckpointPos.y - 25) {
-                triggerGameOverState();
-            }
+        if (!gameOver) {
+            updatePhysicsAndAnimations();
+            updateCameraPosition();
         }
 
-        function updateCameraPosition() {
-            let tX = playerGroup.position.x + cameraRadius * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
-            let tY = playerGroup.position.y + cameraRadius * Math.sin(cameraAngleY) + 1.2;
-            let tZ = playerGroup.position.z + cameraRadius * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
-            camera.position.set(tX, tY, tZ);
-            camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.0, playerGroup.position.z);
-            sunLight.position.set(playerGroup.position.x + 30, playerGroup.position.y + 70, playerGroup.position.z + 20);
-            sunLight.shadow.camera.position.set(playerGroup.position.x, playerGroup.position.y, playerGroup.position.z);
-        }
+        renderer.render(scene, camera);
+    }
 
-        function triggerGameOverState() {
-            gameOver = true;
-            document.getElementById('final-score').innerText = Math.floor(highestY);
-            document.getElementById('gameover-screen').style.display = 'flex';
-        }
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
-        function respawnAtCheckpoint() {
-            playerGroup.position.copy(lastCheckpointPos);
-            playerVelocity.set(0, 0, 0);
-            gameOver = false;
-            document.getElementById('gameover-screen').style.display = 'none';
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!gameOver) {
-                updatePhysicsAndAnimations();
-                updateCameraPosition();
-            }
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Initialize Engine Core
-        init();
-        animate();
-    </script>
+    init();
+    animate();
+</script>
 </body>
 </html>
