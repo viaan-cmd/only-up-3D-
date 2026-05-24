@@ -2,367 +2,318 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NEON-STRIKE: OMEGA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Only Up - Procedural Edition</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #0ff; pointer-events: none; }
-        .stat-box { background: rgba(0,20,20,0.8); border: 1px solid #0ff; padding: 10px; margin-bottom: 5px; }
-        canvas { display: block; image-rendering: pixelated; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #1a1a1a; }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        #gameover-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        #gameover-screen h1 { font-size: 48px; color: #ff4757; margin-bottom: 10px; }
+        #gameover-screen p { font-size: 20px; margin-bottom: 20px; }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 16px;
+            text-shadow: 1px 1px 3px black;
+            pointer-events: none;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <div id="ui">
-        <div class="stat-box">HP: <span id="hp">100</span>%</div>
-        <div class="stat-box">COORD: <span id="coord">0,0</span></div>
+
+    <div id="ui">Height: <span id="height-score">0</span>m</div>
+    <div id="instructions">WASD / Arrow Keys to Move | Spacebar to Jump | Mouse drags camera</div>
+    
+    <div id="gameover-screen">
+        <h1>YOU FELL!</h1>
+        <p>Highest Altitude: <span id="final-score">0</span>m</p>
+        <button onclick="resetGame()" style="padding: 10px 20px; font-size: 18px; cursor: pointer; background: #2ed573; border: none; color: white; border-radius: 5px;">Try Again</button>
     </div>
-    <canvas id="mainView"></canvas>
-<script>
-// --- BRANCH 2: CONFIG ---
-const CONFIG = {
-    TILE: 64,
-    MAP_SIZE: 32,
-    FOV: Math.PI / 3,
-    MAX_DEPTH: 1000
-};
 
-const WorldBranch = {
-    grid: [],
-    generate() {
-        for(let y = 0; y < CONFIG.MAP_SIZE; y++) {
-            this.grid[y] = [];
-            for(let x = 0; x < CONFIG.MAP_SIZE; x++) {
-                const isEdge = (x === 0 || x === CONFIG.MAP_SIZE-1 || y === 0 || y === CONFIG.MAP_SIZE-1);
-                this.grid[y][x] = (isEdge || Math.random() < 0.1) ? Math.floor(Math.random() * 3) + 1 : 0;
-            }
-        }
-        this.grid[1][1] = 0; this.grid[1][2] = 0; this.grid[2][1] = 0;
+<script>
+    // --- Engine Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xaaccff); // Sky color
+    scene.fog = new THREE.FogExp2(0xaaccff, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(20, 40, 20);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // --- Game Variables & Physics ---
+    let player, playerRadius = 0.6;
+    let playerVelocity = new THREE.Vector3();
+    let isGrounded = false;
+    const gravity = -0.015;
+    const jumpForce = 0.38;
+    const moveSpeed = 0.12;
+
+    let platforms = [];
+    let nextPlatformZ = 0; // In Three.js, we climb up the Y axis, Z/X are horizontal
+    let highestY = 0;
+    let gameOver = false;
+
+    // Input tracking
+    const keys = { w: false, a: false, s: false, d: false, Space: false };
+    
+    // Camera Control Variables
+    let cameraAngleX = 0;
+    let cameraAngleY = 0.3; 
+    const cameraRadius = 8;
+    let isMouseDown = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    // --- Procedural Map Generation Logic ---
+    function createPlatform(x, y, z, width, depth) {
+        const geometry = new THREE.BoxGeometry(width, 0.5, depth);
+        // Stylized colorful grid texture simulation
+        const material = new THREE.MeshStandardMaterial({ 
+            color: Math.random() * 0xffffff, 
+            roughness: 0.4 
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, y, z);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        
+        // Store bounding logic details for optimized collision checks
+        platforms.push({
+            mesh: mesh,
+            minX: x - width/2, maxX: x + width/2,
+            minZ: z - depth/2, maxZ: z + depth/2,
+            y: y
+        });
     }
-};
-WorldBranch.generate();
-</script>
-<script>
-// --- BRANCH 3: PHYSICS ---
-const InputBranch = {
-    keys: {},
-    init() {
-        window.onkeydown = e => this.keys[e.code] = true;
-        window.onkeyup = e => this.keys[e.code] = false;
-    }
-};
-InputBranch.init();
 
-const PlayerBranch = {
-    x: 96, y: 96, dir: 0, hp: 100,
-    update() {
-        let move = 0;
-        if(InputBranch.keys['KeyW']) move = 3.5;
-        if(InputBranch.keys['KeyS']) move = -2.5;
-        if(InputBranch.keys['KeyA']) this.dir -= 0.05;
-        if(InputBranch.keys['KeyD']) this.dir += 0.05;
+    function generateChunk() {
+        // Always ensure there are at least 25 platforms ahead of the player
+        while (platforms.length < 25) {
+            let lastY = platforms.length > 0 ? platforms[platforms.length - 1].y : 0;
+            let lastX = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.x : 0;
+            let lastZ = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.z : 0;
 
-        let nx = this.x + Math.cos(this.dir) * move;
-        let ny = this.y + Math.sin(this.dir) * move;
+            // Procedural math constraints to make sure jumps are always humanly possible
+            let stepY = 1.8 + Math.random() * 1.2; // Vertical distance range
+            let stepX = (Math.random() - 0.5) * 5;  // Horizontal spread
+            let stepZ = (Math.random() - 0.5) * 5;  // Depth spread
 
-        if(WorldBranch.grid[Math.floor(ny/CONFIG.TILE)][Math.floor(nx/CONFIG.TILE)] === 0) {
-            this.x = nx; this.y = ny;
-        }
-        document.getElementById('coord').innerText = `${Math.floor(this.x)},${Math.floor(this.y)}`;
-    }
-};
-</script>
-<script>
-// --- BRANCH 4: ENTITIES ---
-const EntityBranch = {
-    collection: [],
-    spawn(x, y, type) { this.collection.push({ x, y, type }); }
-};
-// Spawn some initial items
-EntityBranch.spawn(200, 200, 'battery');
-EntityBranch.spawn(400, 300, 'chip');
-</script>
-<script>
-// --- BRANCH 5: RENDERER ---
-const RenderBranch = {
-    canvas: document.getElementById('mainView'),
-    ctx: document.getElementById('mainView').getContext('2d'),
-    init() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    },
-    draw() {
-        const w = this.canvas.width, h = this.canvas.height;
-        this.ctx.fillStyle = '#001'; this.ctx.fillRect(0, 0, w, h/2);
-        this.ctx.fillStyle = '#111'; this.ctx.fillRect(0, h/2, w, h/2);
+            let pWidth = 2 + Math.random() * 3;
+            let pDepth = 2 + Math.random() * 3;
 
-        for(let i = 0; i < w; i += 2) {
-            let ra = (PlayerBranch.dir - CONFIG.FOV/2) + (i / w) * CONFIG.FOV;
-            let d = 0, hit = 0, cx = Math.cos(ra), cy = Math.sin(ra);
-            while(d < CONFIG.MAX_DEPTH) {
-                d += 2;
-                let tx = Math.floor((PlayerBranch.x + cx * d) / CONFIG.TILE);
-                let ty = Math.floor((PlayerBranch.y + cy * d) / CONFIG.TILE);
-                if(WorldBranch.grid[ty] && WorldBranch.grid[ty][tx] > 0) { hit = WorldBranch.grid[ty][tx]; break; }
-            }
-            let z = d * Math.cos(ra - PlayerBranch.dir);
-            let wh = (CONFIG.TILE * h) / z;
-            let s = Math.max(0, 255 - z/3);
-            this.ctx.fillStyle = `rgb(0, ${s/2}, ${s})`;
-            this.ctx.fillRect(i, (h - wh)/2, 2, wh);
+            // Make platforms progressively smaller/harder the higher you go
+            if (lastY > 50) { pWidth *= 0.7; pDepth *= 0.7; }
+            if (lastY > 120) { pWidth *= 0.5; pDepth *= 0.5; }
+
+            createPlatform(lastX + stepX, lastY + stepY, lastZ + stepZ, pWidth, pDepth);
         }
     }
-};
-RenderBranch.init();
-</script>
-<script>
-// --- BRANCH 7: ENEMY AI ---
-const EnemyBranch = {
-    enemies: [],
-    spawn(x, y) {
-        this.enemies.push({ x, y, hp: 100, speed: 1.5 });
-    },
-    update() {
-        this.enemies.forEach(en => {
-            let dx = PlayerBranch.x - en.x;
-            let dy = PlayerBranch.y - en.y;
-            let dist = Math.hypot(dx, dy);
-            
-            if(dist > 30) {
-                en.x += (dx / dist) * en.speed;
-                en.y += (dy / dist) * en.speed;
-            } else {
-                PlayerBranch.hp -= 0.1;
-            }
-        });
+
+    // --- Initialization & Core Setup ---
+    function init() {
+        // Clear existing objects if restarting
+        platforms.forEach(p => scene.remove(p.mesh));
+        platforms = [];
+
+        // Create starting zone platform
+        createPlatform(0, -0.25, 0, 8, 8);
+
+        // Spawn player sphere
+        const playerGeo = new THREE.SphereGeometry(playerRadius, 32, 32);
+        const playerMat = new THREE.MeshStandardMaterial({ color: 0xff4757, roughness: 0.2 });
+        
+        if(player) scene.remove(player);
+        player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.set(0, 2, 0);
+        player.castShadow = true;
+        scene.add(player);
+
+        playerVelocity.set(0,0,0);
+        highestY = 0;
+        gameOver = false;
+        document.getElementById('gameover-screen').style.display = 'none';
+
+        generateChunk();
     }
-};
 
-// Spawn one enemy to start
-EnemyBranch.spawn(300, 300);
-</script>
-<script>
-// --- BRANCH 8: COMBAT SYSTEM (WEAPONS) ---
-const CombatBranch = {
-    projectiles: [],
-    canShoot: true,
-    init() {
-        window.addEventListener('mousedown', () => this.shoot());
-        window.addEventListener('keydown', e => { if(e.code === 'Space') this.shoot(); });
-    },
-    shoot() {
-        if(!this.canShoot) return;
-        this.projectiles.push({
-            x: PlayerBranch.x, y: PlayerBranch.y,
-            vx: Math.cos(PlayerBranch.dir) * 10,
-            vy: Math.sin(PlayerBranch.dir) * 10,
-            life: 60
-        });
-        this.canShoot = false;
-        setTimeout(() => this.canShoot = true, 250); // Fire rate
-    },
-    update() {
-        this.projectiles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life--;
-            // Collision with walls
-            if(WorldBranch.grid[Math.floor(p.y/CONFIG.TILE)][Math.floor(p.x/CONFIG.TILE)] > 0) p.life = 0;
-            // Collision with enemies
-            EnemyBranch.enemies.forEach(en => {
-                if(Math.hypot(p.x - en.x, p.y - en.y) < 20) {
-                    en.hp -= 50; p.life = 0;
-                    if(en.hp <= 0) en.dead = true;
-                }
-            });
-            if(p.life <= 0) this.projectiles.splice(i, 1);
-        });
-    }
-};
-CombatBranch.init();
-
-// --- BRANCH 9: PARTICLE ENGINE (FX) ---
-const FXBranch = {
-    sparks: [],
-    spawn(x, y, color) {
-        for(let i=0; i<5; i++) {
-            this.sparks.push({ x, y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, t: 20, c: color });
-        }
-    },
-    update() {
-        this.sparks.forEach((s, i) => { s.x += s.vx; s.y += s.vy; s.t--; if(s.t <= 0) this.sparks.splice(i, 1); });
-    }
-};
-
-// --- BRANCH 10: ADVANCED AI TYPES ---
-EnemyBranch.spawnGhost = function(x, y) {
-    this.enemies.push({ x, y, hp: 50, speed: 3, type: 'stalker' });
-};
-
-// --- BRANCH 11: LOOT & INVENTORY ---
-const LootBranch = {
-    items: [],
-    spawn(x, y) { this.items.push({ x, y, type: 'nano_core' }); },
-    update() {
-        this.items.forEach((it, i) => {
-            if(Math.hypot(PlayerBranch.x - it.x, PlayerBranch.y - it.y) < 30) {
-                PlayerBranch.hp = Math.min(100, PlayerBranch.hp + 20);
-                this.items.splice(i, 1);
-            }
-        });
-    }
-};
-
-// --- BRANCH 12: DYNAMIC LIGHTING ENGINE ---
-// (Integrated into RenderBranch.draw logic)
-
-// --- BRANCH 13: PROCEDURAL LEVEL CYCLING ---
-const ProgressionBranch = {
-    floor: 1,
-    nextFloor() {
-        this.floor++;
-        WorldBranch.generate();
-        PlayerBranch.x = 96; PlayerBranch.y = 96;
-        for(let i=0; i<this.floor + 2; i++) EnemyBranch.spawn(Math.random()*500+200, Math.random()*500+200);
-    }
-};
-
-// --- BRANCH 14: SOUND SIMULATOR (VISUAL) ---
-const AudioBranch = {
-    pulse: 0,
-    update() { this.pulse = Math.sin(Date.now()/200) * 5; }
-};
-
-// --- BRANCH 15: HUD ENHANCEMENTS ---
-function updateHUD() {
-    document.getElementById('hp').innerText = Math.floor(PlayerBranch.hp);
-    document.getElementById('coord').innerText = `FLOOR ${ProgressionBranch.floor} | SEC: ${Math.floor(PlayerBranch.x/64)},${Math.floor(PlayerBranch.y/64)}`;
-}
-</script>
-
-<script>
-<script>
-// --- BRANCH 16: MINI-MAP SYSTEM ---
-const MapBranch = {
-    mCanvas: null, mCtx: null,
-    init() {
-        this.mCanvas = document.createElement('canvas');
-        this.mCanvas.width = 150; this.mCanvas.height = 150;
-        this.mCanvas.style.position = 'absolute';
-        this.mCanvas.style.top = '20px'; this.mCanvas.style.right = '20px';
-        this.mCanvas.style.border = '2px solid #0ff';
-        this.mCanvas.style.background = 'rgba(0,0,0,0.5)';
-        document.body.appendChild(this.mCanvas);
-        this.mCtx = this.mCanvas.getContext('2d');
-    },
-    draw() {
-        this.mCtx.clearRect(0,0,150,150);
-        const s = 150 / CONFIG.MAP_SIZE;
-        WorldBranch.grid.forEach((row, y) => {
-            row.forEach((cell, x) => {
-                if(cell > 0) { this.mCtx.fillStyle = '#0ff'; this.mCtx.fillRect(x*s, y*s, s, s); }
-            });
-        });
-        this.mCtx.fillStyle = '#f0f';
-        this.mCtx.fillRect((PlayerBranch.x/64)*s-2, (PlayerBranch.y/64)*s-2, 4, 4);
-    }
-};
-MapBranch.init();
-
-// --- BRANCH 17: WEAPON SWAY & SHAKE ---
-let swayX = 0, swayY = 0, shakeTime = 0;
-function triggerShake(amt) { shakeTime = amt; }
-
-// --- BRANCH 18: BOSS SYSTEM ---
-const BossBranch = {
-    active: false,
-    spawn() {
-        EnemyBranch.enemies.push({ x: 500, y: 500, hp: 500, speed: 1, boss: true });
-        this.active = true;
-    }
-};
-
-// --- BRANCH 19: SYSTEM RESET ---
-function resetSystem() {
-    PlayerBranch.hp = 100; ProgressionBranch.floor = 1;
-    WorldBranch.generate(); PlayerBranch.x = 96; PlayerBranch.y = 96;
-    EnemyBranch.enemies = []; ProgressionBranch.nextFloor();
-}
-<script>
-// --- BRANCH 16: MINI-MAP SYSTEM ---
-const MapBranch = {
-    mCanvas: null, mCtx: null,
-    init() {
-        this.mCanvas = document.createElement('canvas');
-        this.mCanvas.width = 150; this.mCanvas.height = 150;
-        this.mCanvas.style.position = 'absolute';
-        this.mCanvas.style.top = '20px'; this.mCanvas.style.right = '20px';
-        this.mCanvas.style.border = '2px solid #0ff';
-        this.mCanvas.style.background = 'rgba(0,0,0,0.5)';
-        document.body.appendChild(this.mCanvas);
-        this.mCtx = this.mCanvas.getContext('2d');
-    },
-    draw() {
-        this.mCtx.clearRect(0,0,150,150);
-        const s = 150 / CONFIG.MAP_SIZE;
-        WorldBranch.grid.forEach((row, y) => {
-            row.forEach((cell, x) => {
-                if(cell > 0) { this.mCtx.fillStyle = '#0ff'; this.mCtx.fillRect(x*s, y*s, s, s); }
-            });
-        });
-        this.mCtx.fillStyle = '#f0f';
-        this.mCtx.fillRect((PlayerBranch.x/64)*s-2, (PlayerBranch.y/64)*s-2, 4, 4);
-    }
-};
-MapBranch.init();
-
-// --- BRANCH 17: WEAPON SWAY & SHAKE ---
-let swayX = 0, swayY = 0, shakeTime = 0;
-function triggerShake(amt) { shakeTime = amt; }
-
-// --- BRANCH 18: BOSS SYSTEM ---
-const BossBranch = {
-    active: false,
-    spawn() {
-        EnemyBranch.enemies.push({ x: 500, y: 500, hp: 500, speed: 1, boss: true });
-        this.active = true;
-    }
-};
-
-// --- BRANCH 19: SYSTEM RESET ---
-function resetSystem() {
-    PlayerBranch.hp = 100; ProgressionBranch.floor = 1;
-    WorldBranch.generate(); PlayerBranch.x = 96; PlayerBranch.y = 96;
-    EnemyBranch.enemies = []; ProgressionBranch.nextFloor();
-}
-
-// --- BRANCH 20 & 21: UPDATED ORCHESTRATOR ---
-function gameLoop() {
-    PlayerBranch.update();
-    EnemyBranch.update();
-    CombatBranch.update();
-    FXBranch.update();
-    LootBranch.update();
-
-    EnemyBranch.enemies = EnemyBranch.enemies.filter(en => {
-        if(en.dead) { 
-            LootBranch.spawn(en.x, en.y); 
-            triggerShake(10);
-            return false; 
-        }
-        return true;
+    // --- Input Event Handlers & Bug Patches ---
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = true;
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = true;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+        if (e.code === 'Space') keys.Space = true;
     });
 
-    if(EnemyBranch.enemies.length === 0) ProgressionBranch.nextFloor();
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyW' || e.code === 'ArrowUp') keys.w = false;
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
+        if (e.code === 'KeyS' || e.code === 'ArrowDown') keys.s = false;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+        if (e.code === 'Space') keys.Space = false;
+    });
 
-    RenderBranch.draw();
-    MapBranch.draw();
-    updateHUD();
-       if(PlayerBranch.hp > 0) {
-        requestAnimationFrame(gameLoop);
-    } else {
-        if(confirm("SYSTEM CRITICAL: REBOOT?")) {
-            resetSystem();
-            gameLoop(); // This line restarts the engine
+    // Mouse Controls for 3D Camera Orbiting
+    window.addEventListener('mousedown', () => isMouseDown = true);
+    window.addEventListener('mouseup', () => isMouseDown = false);
+    window.addEventListener('mousemove', (e) => {
+        if (isMouseDown) {
+            let deltaX = e.clientX - previousMousePosition.x;
+            let deltaY = e.clientY - previousMousePosition.y;
+
+            cameraAngleX -= deltaX * 0.005;
+            cameraAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.05, cameraAngleY + deltaY * 0.005)); // Fix vertical axis lock bug
+        }
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+
+    // --- Physics Engine & AABB Collision Detection ---
+    function updatePhysics() {
+        // Apply Gravity
+        playerVelocity.y += gravity;
+
+        // Calculate horizontal direction vectors based on where the camera is facing
+        let forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
+        let right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraAngleX).normalize();
+
+        let moveDirection = new THREE.Vector3();
+        if (keys.w) moveDirection.add(forward);
+        if (keys.s) moveDirection.add(forward.clone().negate());
+        if (keys.d) moveDirection.add(right);
+        if (keys.a) moveDirection.add(right.clone().negate());
+        
+        moveDirection.normalize().multiplyScalar(moveSpeed);
+        
+        playerVelocity.x = moveDirection.x;
+        playerVelocity.z = moveDirection.z;
+
+        // Apply movement updates
+        player.position.x += playerVelocity.x;
+        player.position.y += playerVelocity.y;
+        player.position.z += playerVelocity.z;
+
+        // Vertical Axis Collision Check Loop
+        isGrounded = false;
+        let pX = player.position.x;
+        let pY = player.position.y;
+        let pZ = player.position.z;
+
+        for (let i = 0; i < platforms.length; i++) {
+            let p = platforms[i];
+            // Check bounding boxes + offset radius for sphere shape padding
+            if (pX + playerRadius > p.minX && pX - playerRadius < p.maxX &&
+                pZ + playerRadius > p.minZ && pZ - playerRadius < p.maxZ) {
+                
+                // Falling collision check logic fix (prevents snapping through floor)
+                if (playerVelocity.y <= 0 && pY - playerRadius <= p.y + 0.25 && pY >= p.y) {
+                    player.position.y = p.y + 0.25 + playerRadius;
+                    playerVelocity.y = 0;
+                    isGrounded = true;
+                    break;
+                }
+            }
+        }
+
+        // Jump Execution
+        if (keys.Space && isGrounded) {
+            playerVelocity.y = jumpForce;
+            isGrounded = false;
+        }
+
+        // Track Score Metrics
+        if (player.position.y > highestY) {
+            highestY = player.position.y;
+            document.getElementById('height-score').innerText = Math.floor(highestY);
+        }
+
+        // Dynamic Spawning cleanup (deletes old objects underneath to preserve memory)
+        if (platforms.length > 0 && player.position.y - platforms[0].y > 35) {
+            scene.remove(platforms[0].mesh);
+            platforms.shift();
+            generateChunk();
+        }
+
+        // Check Kill Boundary (Fall Out of Map Void Loop)
+        if (player.position.y < highestY - 25) {
+            triggerGameOver();
         }
     }
-}
-gameLoop();
- 
-    
+
+    // --- Camera Positioning Script ---
+    function updateCamera() {
+        // Standard third-person anchor equations matching camera rotation math
+        let targetX = player.position.x + cameraRadius * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+        let targetY = player.position.y + cameraRadius * Math.sin(cameraAngleY) + 1;
+        let targetZ = player.position.z + cameraRadius * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+
+        camera.position.set(targetX, targetY, targetZ);
+        camera.lookAt(player.position.x, player.position.y + 0.5, player.position.z);
+    }
+
+    function triggerGameOver() {
+        gameOver = true;
+        document.getElementById('final-score').innerText = Math.floor(highestY);
+        document.getElementById('gameover-screen').style.display = 'flex';
+    }
+
+    function resetGame() {
+        init();
+    }
+
+    // --- Main Rendering Tick Loop ---
+    function animate() {
+        requestAnimationFrame(animate);
+
+        if (!gameOver) {
+            updatePhysics();
+            updateCamera();
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    // Handle Window Resizing Bug
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Start
+    init();
+    animate();
+</script>
+</body>
+</html>
