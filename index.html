@@ -65,6 +65,30 @@
             letter-spacing: 1px;
             pointer-events: none;
         }
+
+        #mobile-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 999;
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #mobile-controls {
+        display: block;
+    }
+}
+
+#mobile-controls button {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    font-size: 24px;
+}
+
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -79,6 +103,16 @@
         <p>Highest Reached: <span id="final-score">0</span>m</p>
         <button class="btn" onclick="respawnAtCheckpoint()">Respawn at Checkpoint</button>
     </div>
+    <div id="mobile-controls">
+    <button id="btn-up">▲</button>
+    <div id="side-buttons">
+        <button id="btn-left">◀</button>
+        <button id="btn-right">▶</button>
+    </div>
+    <button id="btn-down">▼</button>
+    <button id="btn-jump">JUMP</button>
+</div>
+
 
 <script>
     // --- Engine & World Configuration ---
