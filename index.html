@@ -6,7 +6,7 @@
     
     <meta name="google-site-verification" content="0a0GsyBJrFqG_jZNM_x8fXwHw9sFh_Xf6_b0G5MhREw" />
     
-    <title>Ascent: Only Up 3D (Ultimate Edition)</title>
+    <title>Ascent: Only Up 3D (Controls Fixed)</title>
     <style>
         body { 
             margin: 0; 
@@ -145,7 +145,7 @@
         <span style="font-size:12px; color:#a4b0be;">Checkpoint: <span id="chk-height">0</span>m</span>
     </div>
     <div id="checkpoint-toast">CHECKPOINT ACTIVATED!</div>
-    <div id="instructions">Keyboard: W,A,S,D to Walk | Space to Jump<br>Tablet/Mobile: Left Joystick | Right Screen Swipe</div>
+    <div id="instructions">Keyboard: W,A,S,D to Walk | Click & Drag to Look | Space to Jump<br>Tablet/Mobile: Left Joystick | Right Screen Swipe</div>
     
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="jump-button">JUMP</div>
@@ -205,8 +205,8 @@
     const cameraRadius = 9;
     let sensitivityModifier = 0.0075;
 
-    // Mixed Input Registries (Keyboard + Touch Processing Engine)
-    const keyState = { w: false, a: false, s: false, d: false, Space: false };
+    // Mixed Input Registries (Fixed Case Handling mapping)
+    const keyState = { w: false, a: false, s: false, d: false, space: false };
     const moveInput = { x: 0, y: 0 };
     let wantToJump = false;
     let touchLookId = null;
@@ -222,7 +222,7 @@
         document.getElementById('main-menu').style.display = 'none';
         document.getElementById('ui').style.display = 'block';
         
-        // Show touch controls if browser detects layout parameters matching mobile/tablet environments
+        // Show touch controls if browser detects touch layouts
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             document.getElementById('joystick-container').style.display = 'block';
             document.getElementById('jump-button').style.display = 'flex';
@@ -261,12 +261,11 @@
         scene.add(playerGroup);
     }
 
-    // --- ONLY UP REALISTIC MAP GENERATION SYSTEM ---
+    // --- ONLY UP MAP GENERATION SYSTEM ---
     function createProceduralPlatform(x, y, z, width, height, depth, category = "cargo") {
         let geometry = new THREE.BoxGeometry(width, height, depth);
         let material;
 
-        // Custom realistic architectural styling profiles
         switch(category) {
             case "checkpoint":
                 material = new THREE.MeshStandardMaterial({ color: 0x2ed573, emissive: 0x0f5127, roughness: 0.2 });
@@ -276,14 +275,13 @@
                 material = new THREE.MeshStandardMaterial({ color: 0xffa502, metalness: 0.7, roughness: 0.3 });
                 break;
             case "cargo_container":
-                // Classic realistic metal freight container look
                 const colors = [0x1e3799, 0xb71540, 0xe58e26, 0x079992, 0x38ada9];
                 material = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.7, metalness: 0.2 });
                 break;
             case "neon_girder":
                 material = new THREE.MeshStandardMaterial({ color: 0x00d2d3, emissive: 0x006266, roughness: 0.4 });
                 break;
-            default: // Structural Stone / Concrete
+            default: 
                 material = new THREE.MeshStandardMaterial({ color: 0x718093, roughness: 0.9 });
         }
 
@@ -318,7 +316,6 @@
             let lastX = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.x : 0;
             let lastZ = platforms.length > 0 ? platforms[platforms.length - 1].mesh.position.z : 0;
 
-            // Long climbs: Generate varying height steps creating extensive structural challenges
             let stepY = 1.8 + Math.random() * 1.2; 
             let stepX = (Math.random() - 0.5) * 7.5;
             let stepZ = (Math.random() - 0.5) * 7.5;
@@ -328,42 +325,46 @@
             let nextZ = lastZ + stepZ;
 
             if (platforms.length % 15 === 0 && platforms.length > 0) {
-                // Checkpoint Safe zones
                 createProceduralPlatform(nextX, nextY, nextZ, 4.5, 0.6, 4.5, "checkpoint");
             } else {
                 let sectionChance = Math.random();
                 if (sectionChance < 0.35) {
-                    // Massive Heavy Cargo Carrier Containers (Wide paths)
                     createProceduralPlatform(nextX, nextY, nextZ, 2.2, 1.8, 5.0, "cargo_container");
                 } else if (sectionChance < 0.70) {
-                    // Neon Skyscraper Framework Struts
                     let w = Math.max(1.4, 4.0 - (nextY * 0.01));
                     createProceduralPlatform(nextX, nextY, nextZ, w, 0.5, w, "neon_girder");
                 } else {
-                    // Round high-balancing orange scaffolding pipes
                     createProceduralPlatform(nextX, nextY, nextZ, 0.3, 0.3, 5.5, "industrial_pipe");
                 }
             }
         }
     }
 
-    // --- SMART DEVICE DESKTOP CONTROLS MATRIX ---
+    // --- ACCURATE KEYBOARD CONTROLS SYSTEM ---
     window.addEventListener('keydown', (e) => {
-        if(e.code in keyState) keyState[e.code] = true;
-        if(e.code === 'Space') keyState.Space = true;
-    });
-    window.addEventListener('keyup', (e) => {
-        if(e.code in keyState) keyState[e.code] = false;
-        if(e.code === 'Space') keyState.Space = false;
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') keyState.w = true;
+        if (key === 's' || key === 'arrowdown') keyState.s = true;
+        if (key === 'a' || key === 'arrowleft') keyState.a = true;
+        if (key === 'd' || key === 'arrowright') keyState.d = true;
+        if (e.code === 'Space') keyState.space = true;
     });
 
-    // Mouse Look Camera Processing Engine (For PCs)
+    window.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') keyState.w = false;
+        if (key === 's' || key === 'arrowdown') keyState.s = false;
+        if (key === 'a' || key === 'arrowleft') keyState.a = false;
+        if (key === 'd' || key === 'arrowright') keyState.d = false;
+        if (e.code === 'Space') keyState.space = false;
+    });
+
+    // Mouse Drag Rotation Linker
     window.addEventListener('mousemove', (e) => {
         if (!gameActive || gameOver || touchLookId !== null) return;
-        // Detects pointer changes if user clicks on screen to handle desktop rotations
-        if(e.buttons === 1) {
-            cameraAngleX -= e.movementX * 0.003;
-            cameraAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, cameraAngleY + e.movementY * 0.003));
+        if (e.buttons === 1) {
+            cameraAngleX -= e.movementX * 0.0035;
+            cameraAngleY = Math.max(0.05, Math.min(Math.PI/2 - 0.1, cameraAngleY + e.movementY * 0.0035));
         }
     });
 
@@ -450,7 +451,6 @@
         platforms.forEach(p => scene.remove(p.mesh));
         platforms = [];
 
-        // Dynamic multi-colored concrete starting zone floor platform base
         createProceduralPlatform(0, -0.4, 0, 12, 0.8, 12, "stone");
 
         if(!playerGroup) buildCharacterMesh();
@@ -477,11 +477,11 @@
 
         let moveDirection = new THREE.Vector3();
         
-        // Combine Keyboard Processing + Mobile Joystick Axis calculations
-        if (keyState.KeyW || keyState.w) moveDirection.add(forward);
-        if (keyState.KeyS || keyState.s) moveDirection.add(forward.clone().negate());
-        if (keyState.KeyA || keyState.a) moveDirection.add(right.clone().negate());
-        if (keyState.KeyD || keyState.d) moveDirection.add(right);
+        // Balanced Core inputs processor
+        if (keyState.w) moveDirection.add(forward);
+        if (keyState.s) moveDirection.add(forward.clone().negate());
+        if (keyState.a) moveDirection.add(right.clone().negate());
+        if (keyState.d) moveDirection.add(right);
 
         if (Math.abs(moveInput.y) > 0.02) moveDirection.add(forward.clone().multiplyScalar(-moveInput.y));
         if (Math.abs(moveInput.x) > 0.02) moveDirection.add(right.clone().multiplyScalar(moveInput.x));
@@ -510,7 +510,7 @@
             limbs.leftArm.rotation.x *= 0.8; limbs.rightArm.rotation.x *= 0.8;
         }
 
-        // --- Boundary Map Hard Core Collision Engine ---
+        // --- Collision Matrix ---
         isGrounded = false;
         let pX = playerGroup.position.x;
         let pY = playerGroup.position.y;
@@ -551,8 +551,7 @@
             }
         }
 
-        // Fire jump execution parameters if either touch toggle or spacebar is activated
-        if ((keyState.Space || wantToJump) && isGrounded) {
+        if ((keyState.space || wantToJump) && isGrounded) {
             playerVelocity.y = jumpForce;
             isGrounded = false;
             wantToJump = false; 
@@ -563,7 +562,6 @@
             limbs.leftArm.rotation.x = -0.4; limbs.rightArm.rotation.x = -0.4;
         }
 
-        // Sky atmosphere color tracking changes depending on height milestones
         if (playerGroup.position.y > highestY) {
             highestY = playerGroup.position.y;
             document.getElementById('height-score').innerText = Math.floor(highestY);
@@ -573,14 +571,12 @@
             scene.fog.color.setHex(skyColorHex);
         }
 
-        // Performance management cleanup loop
         if (platforms.length > 0 && playerGroup.position.y - platforms[0].y > 55) {
             scene.remove(platforms[0].mesh);
             platforms.shift();
             generateRealisticWorldLayout();
         }
 
-        // Trigger Fall Penalty State
         if (playerGroup.position.y < lastCheckpointPos.y - 25) {
             triggerGameOverState();
         }
